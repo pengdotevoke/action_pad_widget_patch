@@ -17,14 +17,25 @@ patch(ActionpadWidget.prototype, {
             return;
         }
 
+        const isCancellation = orderLines.some(line => line.get_quantity() < 0);
+        const orderType = isCancellation ? "Kitchen Order: Cancellation" : "Kitchen Order";
 
-        // Get order lines and format them into HTML
-        const orderLinesHtml = orderLines.map((line) => `
-            <tr>
-                <td>${line.get_product().display_name}<br/> ${line.customerNote}</td>
-                <td>${line.get_quantity()}</td>
-            </tr>
-        `).join("");
+        // Retrieve order details
+        const table = order.pos.table?.name || "N/A";
+        const numcustomers = order.customerCount || "N/A";
+        const orderDate = order.creation_date || new Date().toLocaleDateString();
+        const orderTime = new Date().toLocaleTimeString();
+
+        // Get order lines with hasChange = true and format them into HTML
+        const changedLines = orderLines.filter(line => line.hasChange);
+        const orderLinesHtml = changedLines.length
+            ? changedLines.map((line) => `
+                <tr>
+                    <td>${line.get_product().display_name}<br/> ${line.customerNote ? line.customerNote : ''}</td>
+                    <td>${line.get_quantity()}</td>
+                </tr>
+            `).join("")
+            : "<tr><td colspan='2' style='text-align: center; color: red;'>No new items to print</td></tr>";
 
         // Generate printable HTML
         const receiptHtml = `
@@ -40,7 +51,11 @@ patch(ActionpadWidget.prototype, {
                 </style>
             </head>
             <body>
-                <h2>Kitchen Order</h2>
+                <h2>${orderType}</h2>                
+                <div class="details" style='text-align: center;'>
+                    <p>Table: ${table} | Customers: ${numcustomers}</p>
+                    <p>Date: ${orderDate} | Time: ${orderTime}</p>
+                </div>
                 <table>
                     <tr>
                         <th>Product</th>
